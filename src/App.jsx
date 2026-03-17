@@ -31,15 +31,16 @@ const RDW_BASE = 'https://opendata.rdw.nl/resource';
 const normalizePlate = (plate) => plate.replace(/[-\s]/g, '').toUpperCase();
 
 // Translate Dutch fuel descriptions to English
+// Translate RDW fuel descriptions to standard Dutch terms
 const fuelMap = {
-  'Benzine': 'Petrol',
+  'Benzine': 'Benzine',
   'Diesel': 'Diesel',
-  'Elektriciteit': 'Electric',
+  'Elektriciteit': 'Elektrisch',
   'LPG': 'LPG',
-  'Waterstof': 'Hydrogen',
-  'CNG': 'CNG (Natural Gas)',
-  'Hybride (benzine/elektriciteit)': 'Hybrid (Petrol/Electric)',
-  'Hybride (diesel/elektriciteit)': 'Hybrid (Diesel/Electric)',
+  'Waterstof': 'Waterstof',
+  'CNG': 'Benzine',
+  'Hybride (benzine/elektriciteit)': 'Hybride',
+  'Hybride (diesel/elektriciteit)': 'Hybride',
 };
 
 // Translate Dutch body type descriptions to English
@@ -385,7 +386,7 @@ INPUT DIE JE KRIJGT:
 * Bouwjaar: ${year}
 * Kilometerstand: ${mf.mileage ? mf.mileage + ' km' : 'niet opgegeven'}
 * Brandstof RDW: ${fuel}
-* Transmissie: ${trans}
+* Transmissie (RDW ruwe data): ${rd?.inrichting || 'Onbekend'}
 * APK (indien auto): ${apk ? apk.replace('APK geldig tot ', '') : 'niet opgegeven'}
 * Extra Opties (Door gebruiker): ${mf.features?.length ? mf.features.join(', ') : 'niet opgegeven'}
 * Staat: ${mf.vehicleCondition || 'niet opgegeven'}
@@ -399,6 +400,7 @@ ${doors ? `* Deuren: ${doors}` : ''}
 * Garantie: ${mf.warranty || 'niet opgegeven'}
 * BTW/Marge: ${mf.vatOrMargin === 'vat' ? 'BTW auto' : 'Marge auto'}
 
+Gebruik je kennis om de juiste transmissie (Handgeschakeld of Automaat) te bepalen op basis van de uitvoering en brandstof (bijv. Elektrisch/Hybride is vrijwel altijd Automaat).
 Gebruik je kennis om waarschijnlijke opties aan te vullen naast de Extra Opties.
 Bepaal zelf of dit een Auto of Scooter is op basis van de input en kies de juiste template.
 
