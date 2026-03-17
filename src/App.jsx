@@ -1,21 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { 
-  Car, 
-  Upload, 
-  X, 
-  Check, 
-  Copy, 
-  Moon, 
-  Sun, 
-  Sparkles, 
   Settings2,
   RefreshCw,
   Edit3,
   ListPlus,
   Search,
   AlertCircle,
-  Loader2
+  Loader2,
+  Upload,
+  X,
+  Check,
+  Copy,
+  Moon,
+  Sun,
+  Sparkles
 } from 'lucide-react';
+import logo from './assets/logo.png';
+
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '', { apiVersion: 'v1' });
+
+if (!import.meta.env.VITE_GEMINI_API_KEY) {
+  console.warn("VITE_GEMINI_API_KEY is missing in your .env file!");
+}
 
 // ── RDW API helpers ────────────────────────────────────────────────────────────
 const RDW_BASE = 'https://opendata.rdw.nl/resource';
@@ -234,46 +241,201 @@ function App() {
     };
 
     try {
-      // Replace the mock below with: const response = await fetch('YOUR_N8N_WEBHOOK', { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type':'application/json'} }).then(r => r.json());
-      const response = await mockN8nRequest(payload);
+      const response = await callGemini(payload);
       setResult(response);
     } catch (error) {
-      console.error('Failed to generate ad', error);
-      alert('Verbinding met backend mislukt.');
+      console.error('Gemini API fout:', error);
+      alert('Advertentie genereren mislukt. Controleer je API-sleutel of probeer het opnieuw.\n\n' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const mockN8nRequest = async (payload) => {
+  const callGemini = async (payload) => {
     const rd = payload.rdw_data;
-    const brand = rd?.brand || 'Voertuig';
-    const model = rd?.model || '';
-    const year  = rd?.year  || '';
-    const fuel  = rd?.fuel  || '';
-    const body  = rd?.bodyType || '';
-    const color = rd?.color || '';
+    const mf = payload.manual_input_fields;
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          vehicle_summary: {
-            brand,
-            model,
-            year,
-            fuel,
-            transmission: rd?.transmission    || 'Unknown',
-            bodyType: body,
-            color,
-          },
-          title: `${brand} ${model} (${year}) – ${fuel}, ${body}`,
-          marketplace_ad: `Te koop: ${brand} ${model} uit ${year}.\n\nKleur: ${color}\nBrandstof: ${fuel}\nCarrosserie: ${body}\n\nDit voertuig is in uitstekende staat en rijklaar afgeleverd.\n\nNeem contact op voor een proefrit!`,
-          social_caption: `🚗 Nieuw binnen! ${brand} ${model} (${year}) 🔥\n\nKleur: ${color} | ${fuel}\n\nInteresse? Bel of mail ons! 🏎️💨\n\n#${brand.toLowerCase().replace(/\s/g,'')} #auto #tekoop`,
-          highlights: ['Dealer onderhouden', 'Nieuw APK', 'Rijklaar afgeleverd'],
-          hashtags: [`#${brand.toLowerCase().replace(/\s/g,'')}`, '#tekoop', '#auto', '#occasiondealer']
-        });
-      }, 2000);
-    });
+    const brand = rd?.brand || 'Onbekend';
+    const model = rd?.model || 'Onbekend';
+    const year  = rd?.year  || 'Onbekend';
+    const fuel  = rd?.fuel  || 'Onbekend';
+    const body  = rd?.bodyType || 'Onbekend';
+    const color = rd?.color || 'Onbekend';
+    const trans = rd?.transmission || 'Onbekend';
+    const apk   = rd?.apk ? `APK geldig tot ${rd.apk}` : '';
+    const seats = rd?.seats ? `${rd.seats} zitplaatsen` : '';
+    const doors = rd?.doors ? `${rd.doors} deuren` : '';
+
+    const prompt = `Je bent een professionele advertentie schrijver voor HDS-Trading, gespecialiseerd in auto’s en scooters.
+
+Schrijf een verkoopgerichte maar zakelijke advertentie in de **wij-vorm**. Je krijgt informatie over een auto of scooter.
+
+BELANGRIJK VOOR BEIDE VOERTUIGEN:
+* Gebruik korte, duidelijke zinnen, professioneel, feitelijk en eerlijk.
+* Brandstof is ALTIJD een van deze: Benzine, Diesel, Hybride, LPG, Waterstof, of Elektrisch. Geen andere termen gebruiken!
+* ZOEK ZELF UIT wat de (waarschijnlijke) standaard opties/specificaties van deze specifieke uitvoering zijn op basis van het model en bouwjaar.
+* Voeg de specifiek meegegeven "Extra Opties" (indien ingevuld door de gebruiker) toe aan jouw lijst.
+* Zorg voor de exacte opmaak met horizontale streepjes (⸻) tussen de secties zoals in het voorbeeld!
+
+---
+
+💡 **ALS HET EEN AUTO IS**, GEBRUIK EXACT DEZE OPMAAK EN VASTE KOPPEN:
+
+[Boordevol enthousiasme beschrijvende introtekst: Te koop aangeboden: een zeer opvallende... Deze auto onderscheidt zich door... etc.]
+
+[Korte alinea over hoe de auto rijdt, onderhoudsstaat, APK en ideale gebruik/doelgroep]
+
+⸻
+
+Basisgegevens
+• Merk / Model: [Merk en Model]
+• Carrosserie: [Carrosserie]
+• Bouwjaar: [Bouwjaar]
+• Kilometerstand: [Kilometerstand]
+• Brandstof: [Brandstof - Let op restrictie!]
+• Transmissie: [Transmissie]
+• Motor: [Motor info]
+• Vermogen: [Vermogen]
+• Kleur exterieur: [Kleur]
+• Interieur: [Interieur indien bekend]
+• Aantal zitplaatsen: [Zitplaatsen]
+
+⸻
+
+APK, historie & gebruik
+• APK geldig tot: [Datum of n.v.t.]
+• Onderhoud: [Onderhoudsstaat]
+• Rijeigenschappen: [Bijv. Rijdt en schakelt goed]
+• Ideaal voor: [Doelgroep/Gebruik]
+
+⸻
+
+Uitvoering & opties
+
+Interieur & comfort
+• [Optie 1]
+• [Optie 2]
+
+Infotainment
+• [Optie 1]
+
+Exterieur
+• [Optie 1]
+• [Optie 2]
+
+⸻
+
+Waarom deze [Model]?
+• [Reden 1]
+• [Reden 2]
+• [Reden 3]
+
+⸻
+
+Vraagprijs: €[Bedrag]
+📞 Interesse of vragen?
+Neem gerust contact op via bellen of een bericht.
+
+Hoewel deze advertentie met de grootste zorg is samengesteld, kunnen aan de inhoud geen rechten worden ontleend. Typefouten en wijzigingen voorbehouden.
+
+---
+
+💡 **ALS HET EEN SCOOTER/BROMMER IS**, GEBRUIK EXACT DEZE OPMAAK EN VASTE KOPPEN:
+
+Hierbij bieden wij deze [unieke/in nieuwstaat verkerende etc.] [Merk en Model] aan, voorzien van [korte beschrijving van opties indien relevant].
+
+De scooter is van het bouwjaar [Bouwjaar] en heeft [Kilometerstand] op de teller. Het betreft een [bromscooter/snorfiets] met een topsnelheid van [snelheid].
+[Extra zin over afkomst/garantie indien bekend].
+
+Optielijst:
+
+Optisch:
+[Opsomming van alle opties onder elkaar, zonder bullets]
+
+Vraagprijs: €[Bedrag] of een goed bod!
+
+Voor vragen of meer informatie kunt u altijd bellen of een bericht sturen naar:
+📞 06-20450541
+
+Met vriendelijke groet,
+HDS-Trading
+
+Hoewel deze advertentie met de grootste zorg is samengesteld, kunnen er geen rechten worden ontleend aan de inhoud. Wijzigingen en typefouten voorbehouden.
+
+---
+
+EXTRA OUTPUT (VERPLICHT VOOR BEIDE):
+
+Na de advertentie genereer je:
+
+1. **Highlights (3–6 bullets)**
+   Korte krachtige verkooppunten
+
+2. **Social media tekst (6–10 regels)**
+* Kort
+* Aantrekkelijk
+* Inclusief prijs
+* Call-to-action
+
+---
+
+INPUT DIE JE KRIJGT:
+* Merk: ${brand}
+* Model: ${model}
+* Bouwjaar: ${year}
+* Kilometerstand: ${mf.mileage ? mf.mileage + ' km' : 'niet opgegeven'}
+* Brandstof RDW: ${fuel}
+* Transmissie: ${trans}
+* APK (indien auto): ${apk ? apk.replace('APK geldig tot ', '') : 'niet opgegeven'}
+* Extra Opties (Door gebruiker): ${mf.features?.length ? mf.features.join(', ') : 'niet opgegeven'}
+* Staat: ${mf.vehicleCondition || 'niet opgegeven'}
+* Prijs: ${mf.price ? mf.price : 'niet opgegeven'}
+* Carrosserie: ${body}
+* Kleur: ${color}
+${seats ? `* Zitplaatsen: ${seats}` : ''}
+${doors ? `* Deuren: ${doors}` : ''}
+* Onderhoudshistorie: ${mf.maintenanceHistory || 'niet opgegeven'}
+* Aantal sleutels: ${mf.numberOfKeys || 'niet opgegeven'}
+* Garantie: ${mf.warranty || 'niet opgegeven'}
+* BTW/Marge: ${mf.vatOrMargin === 'vat' ? 'BTW auto' : 'Marge auto'}
+
+Gebruik je kennis om waarschijnlijke opties aan te vullen naast de Extra Opties.
+Bepaal zelf of dit een Auto of Scooter is op basis van de input en kies de juiste template.
+
+Gebruik EXACT dit JSON format voor de output (geef je antwoord UITSLUITEND als geldig JSON terug, geen markdown, geen uitleg, gebruik \\n voor regeleinden):
+{
+  "title": "Pakkende advertentietitel (max 80 tekens)",
+  "marketplace_ad": "Volledige marktplaatsadvertentie inclusief het verplichte format en contactblok",
+  "social_caption": "Instagram/Facebook caption met emoji's",
+  "highlights": ["Hoogtepunt 1", "Hoogtepunt 2", "Hoogtepunt 3"],
+  "hashtags": ["#hashtag1", "#hashtag2"]
+}`;
+
+    const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    
+    let result;
+    try {
+      result = await geminiModel.generateContent(prompt);
+    } catch (err) {
+      console.warn("Gemini 2.5 Flash gefaald, probeer fallback naar gemini-flash-latest...", err);
+      const fallbackModel = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+      result = await fallbackModel.generateContent(prompt);
+    }
+    
+    const text = result.response.text().trim();
+
+    // Strip markdown code fences if present
+    const cleaned = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    return {
+      vehicle_summary: { brand, model, year, fuel, transmission: trans, bodyType: body, color },
+      title:           parsed.title,
+      marketplace_ad:  parsed.marketplace_ad,
+      social_caption:  parsed.social_caption,
+      highlights:      parsed.highlights || [],
+      hashtags:        parsed.hashtags   || [],
+    };
   };
 
   const copyToClipboard = (text, label) => {
@@ -304,7 +466,9 @@ function App() {
     return (
       <div className="app-container">
         <header>
-          <div className="brand"><Car /> AutoAd Generator</div>
+          <div className="brand">
+            <img src={logo} alt="HDS-Trading" className="logo" />
+          </div>
           <button className="theme-toggle" onClick={toggleTheme}>
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </button>
@@ -319,7 +483,7 @@ function App() {
 
         {/* Vehicle summary */}
         <div className="card">
-          <div className="section-title"><Settings2 /> Voertuiggegevens (RDW)</div>
+          <div className="section-title">Voertuiggegevens (RDW)</div>
           <div className="spec-grid">
             {Object.entries(result.vehicle_summary).map(([key, val]) => (
               <div key={key} className="spec-item">
@@ -342,7 +506,7 @@ function App() {
 
         {/* Marketplace ad */}
         <div className="card">
-          <div className="section-title"><ListPlus /> Marktplaats Advertentie</div>
+          <div className="section-title">Marktplaats Advertentie</div>
           <textarea className="form-group" value={result.marketplace_ad} readOnly style={{ height: '250px' }} />
           <div className="copy-btn-wrapper">
             <button className="btn btn-primary btn-sm" style={{ width: 'auto' }} onClick={() => copyToClipboard(result.marketplace_ad, 'Advertentietekst')}>
@@ -354,7 +518,7 @@ function App() {
         <div className="grid-2">
           {/* Social caption */}
           <div className="card">
-            <div className="section-title"><Sparkles /> Social Media Caption</div>
+            <div className="section-title">Social Media Caption</div>
             <textarea className="form-group" value={result.social_caption} readOnly style={{ height: '150px' }} />
             <div className="copy-btn-wrapper">
               <button className="btn btn-outline btn-sm" onClick={() => copyToClipboard(result.social_caption, 'Caption')}>
@@ -400,7 +564,9 @@ function App() {
   return (
     <div className="app-container">
       <header>
-        <div className="brand"><Car /> AutoAd Generator</div>
+        <div className="brand">
+          <img src={logo} alt="HDS-Trading" className="logo" />
+        </div>
         <button className="theme-toggle" onClick={toggleTheme}>
           {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
         </button>
@@ -408,7 +574,7 @@ function App() {
 
       {/* ── Section 1: License Plate ─────────────────────────────────────── */}
       <div className="card">
-        <div className="section-title"><Car /> Kenteken</div>
+        <div className="section-title">Kenteken</div>
         <div className="helper-text">Voer een Nederlands kenteken in om voertuiggegevens automatisch op te halen via de RDW.</div>
 
         <div className="plate-row">
@@ -476,7 +642,7 @@ function App() {
 
       {/* ── Section 2: Photo Upload ──────────────────────────────────────── */}
       <div className="card">
-        <div className="section-title"><Upload size={20} /> Foto's uploaden</div>
+        <div className="section-title">Foto's uploaden</div>
         <div className="helper-text">Upload voertuigfoto's zodat AI kenmerken en conditie kan detecteren.</div>
         <div
           className="upload-zone"
@@ -509,7 +675,7 @@ function App() {
 
       {/* ── Section 3: Additional Fields ─────────────────────────────────── */}
       <div className="card">
-        <div className="section-title"><Settings2 /> Extra voertuiginformatie</div>
+        <div className="section-title">Extra voertuiginformatie</div>
         <div className="helper-text">Optioneel – vul aan voor een betere advertentie.</div>
 
         <div className="grid-2">
