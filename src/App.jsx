@@ -14,7 +14,8 @@ import {
   Copy,
   Moon,
   Sun,
-  Sparkles
+  Sparkles,
+  Plus
 } from 'lucide-react';
 import logo from './assets/logo.png';
 
@@ -59,6 +60,41 @@ const bodyMap = {
 const transmissionMap = {
   'Handgeschakeld': 'Manual',
   'Automatisch': 'Automatic',
+};
+
+const DEFAULT_OPTIONS = {
+  car: [
+    'Airconditioning',
+    'Apple CarPlay / Android Auto',
+    'Lederen bekleding',
+    'Cruise Control',
+    'Panoramadak',
+    'Navigatiesysteem',
+    'Parkeersensoren (voor & achter)',
+    'Achteruitrijcamera',
+    'Trekhaak',
+    'Stoelverwarming',
+    'Keyless Entry',
+    'LED Verlichting',
+    'Lichtmetalen velgen',
+    'Regensensor',
+    'Dodehoek assistent',
+    'Lane Assist'
+  ],
+  scooter: [
+    'Windscherm (hoog)',
+    'Valbeugels (set)',
+    'Valbeugels (achter)',
+    'Topkoffer',
+    'Led-verlichting',
+    'Anti-diefstal slot',
+    'Alarm',
+    'USB-aansluiting',
+    'Klapscherm',
+    'Beenkleed',
+    'Valbeugels (voor)',
+    'Voetplaten (aluminium)'
+  ]
 };
 
 async function fetchRdwVehicle(plate) {
@@ -214,11 +250,18 @@ function App() {
   };
 
   // ── Features ────────────────────────────────────────────────────────────────
+  const addFeature = (f) => {
+    const val = typeof f === 'string' ? f.trim() : featureInput.trim();
+    if (val && !features.includes(val)) {
+      setFeatures(prev => [...prev, val]);
+      if (typeof f !== 'string') setFeatureInput('');
+    }
+  };
+
   const handleFeatureKeyDown = (e) => {
-    if (e.key === 'Enter' && featureInput.trim()) {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      if (!features.includes(featureInput.trim())) setFeatures(f => [...f, featureInput.trim()]);
-      setFeatureInput('');
+      addFeature();
     }
   };
 
@@ -734,22 +777,58 @@ Gebruik EXACT dit JSON format voor de output (geef je antwoord UITSLUITEND als g
 
         <br />
         <label>Bevestigde opties</label>
-        <div className="helper-text" style={{ marginTop: '-0.25rem' }}>Druk Enter om een optie toe te voegen (bijv. Apple CarPlay, Trekhaak)</div>
-        <div className="tag-input-container">
-          {features.map((feature, i) => (
-            <span key={i} className="tag">
-              {feature}
-              <span className="tag-remove" onClick={() => removeFeature(feature)}><X size={14} /></span>
-            </span>
-          ))}
-          <input
-            type="text"
-            className="tag-input"
-            placeholder={features.length === 0 ? 'Typ en druk Enter…' : ''}
-            value={featureInput}
-            onChange={(e) => setFeatureInput(e.target.value)}
-            onKeyDown={handleFeatureKeyDown}
-          />
+        <div className="helper-text" style={{ marginTop: '-0.25rem' }}>Selecteer standaard opties of voeg handmatig toe.</div>
+        
+        <div className="form-group">
+          <select 
+            className="feature-select"
+            value="" 
+            onChange={(e) => {
+              if (e.target.value) {
+                addFeature(e.target.value);
+                e.target.value = ""; // Reset select
+              }
+            }}
+          >
+            <option value="">Kies een veelvoorkomende optie…</option>
+            <optgroup label="Auto Opties">
+              {DEFAULT_OPTIONS.car.map(opt => (
+                <option key={opt} value={opt} disabled={features.includes(opt)}>{opt}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Scooter Opties">
+              {DEFAULT_OPTIONS.scooter.map(opt => (
+                <option key={opt} value={opt} disabled={features.includes(opt)}>{opt}</option>
+              ))}
+            </optgroup>
+          </select>
+        </div>
+
+        <div className="feature-input-wrapper">
+          <div className="tag-input-container" style={{ flex: 1 }}>
+            {features.map((feature, i) => (
+              <span key={i} className="tag">
+                {feature}
+                <span className="tag-remove" onClick={() => removeFeature(feature)}><X size={14} /></span>
+              </span>
+            ))}
+            <input
+              type="text"
+              className="tag-input"
+              placeholder={features.length === 0 ? 'Typ handmatig een optie…' : ''}
+              value={featureInput}
+              onChange={(e) => setFeatureInput(e.target.value)}
+              onKeyDown={handleFeatureKeyDown}
+            />
+          </div>
+          <button 
+            type="button" 
+            className="btn btn-outline add-feature-btn" 
+            onClick={() => addFeature()}
+            title="Toevoegen"
+          >
+            <Plus size={20} />
+          </button>
         </div>
       </div>
 
