@@ -184,6 +184,7 @@ function App() {
     maintenanceHistory: '',
     numberOfKeys: '',
     vehicleCondition: '',
+    transmission: '',
     vatOrMargin: 'margin'
   });
   const [features, setFeatures] = useState([]);
@@ -441,6 +442,7 @@ ${doors ? `* Deuren: ${doors}` : ''}
 * Onderhoudshistorie: ${mf.maintenanceHistory || 'niet opgegeven'}
 * Aantal sleutels: ${mf.numberOfKeys || 'niet opgegeven'}
 * Garantie: ${mf.warranty || 'niet opgegeven'}
+* Transmissie (Door gebruiker): ${mf.transmission || 'niet opgegeven'}
 * BTW/Marge: ${mf.vatOrMargin === 'vat' ? 'BTW auto' : 'Marge auto'}
 
 Gebruik je kennis om de juiste transmissie (Handgeschakeld of Automaat) te bepalen op basis van de uitvoering en brandstof (bijv. Elektrisch/Hybride is vrijwel altijd Automaat).
@@ -767,6 +769,14 @@ Gebruik EXACT dit JSON format voor de output (geef je antwoord UITSLUITEND als g
           <div className="form-group">
             <label>Aantal sleutels</label>
             <input type="number" name="numberOfKeys" placeholder="bijv. 2" value={manualFields.numberOfKeys} onChange={handleManualFieldChange} />
+          </div>
+          <div className="form-group">
+            <label>Transmissie</label>
+            <select name="transmission" value={manualFields.transmission} onChange={handleManualFieldChange}>
+              <option value="">Kies transmissie…</option>
+              <option value="Handgeschakeld">Handgeschakeld</option>
+              <option value="Automaat">Automaat</option>
+            </select>
           </div>
         </div>
 
